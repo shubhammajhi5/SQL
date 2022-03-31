@@ -1,0 +1,672 @@
+## Number Of Bathrooms And Bedrooms
+
+select city, property_type, avg(bathrooms) as n_bathrooms_avg, avg(bedrooms) as n_bedrooms_avg
+from airbnb_search_details
+group by city, property_type;
+
+
+## Host Popularity Rental Prices
+
+with cte as 
+		(select distinct (price||';'||room_type||';'||host_since||';'||zipcode||';'||number_of_reviews) as host_id,
+		 number_of_reviews, price
+   		 from airbnb_host_searches)
+
+select 
+case when number_of_reviews = 0 then 'New'
+     when number_of_reviews between 1 and 5 then 'Rising'
+     when number_of_reviews between 6 and 15 then 'Trending Up'
+     when number_of_reviews between 16 and 40 then 'Popular'
+     else 'Hot'
+end as host_pop_rating,
+min(price) as min_price, avg(price) as avg_price, max(price) as max_price
+from cte
+group by host_pop_rating;
+
+
+## Customer Details
+
+select first_name, last_name, city, order_details
+from customers c
+left join orders o on c.id = o.cust_id 
+order by first_name, order_details;
+
+
+## Finding User Purchases
+
+with cte as 
+		(select user_id, created_at,
+		 lead(created_at) over (partition by user_id order by created_at) as next_order
+		 from amazon_transactions
+		 order by user_id, created_at)
+
+select distinct user_id
+from cte
+where (next_order - created_at) <= 7
+order by user_id;
+
+
+## Highest Cost Orders
+
+with cte as 
+		(select cust_id, order_date, sum(total_order_cost) as total_order_cost 
+		 from orders
+  		 where order_date between to_date('2019-02-01', 'YYYY-MM-DD') and to_date('2019-05-01', 'YYYY-MM-DD')
+		 group by cust_id, order_date
+		 order by cust_id, order_date),
+
+cte2 as
+	 (select first_name, total_order_cost, order_date,
+	  rank() over (order by total_order_cost desc ) as rnk
+  	  from cte
+	  join customers c on cte.cust_id = c.id)
+
+select first_name, total_order_cost, order_date
+from cte2
+where rnk = 1;
+
+
+## Order Details
+
+select first_name, order_date, order_details, total_order_cost
+from customers c
+join orders o on o.cust_id = c.id
+where first_name in ('Jill' , 'Eva' )
+order by c.id;
+
+
+## Marketing Campaign Success [Advanced]
+
+SELECT count(DISTINCT user_id)
+FROM marketing_campaign
+WHERE user_id in ( SELECT user_id
+     			 FROM marketing_campaign
+       		 GROUP BY user_id
+     			 HAVING count(DISTINCT created_at) >1
+     			 AND count(DISTINCT product_id) >1 )
+AND concat((user_id),'_', (product_id)) not in ( SELECT user_product
+                                                 FROM (SELECT *, rank() over(PARTITION BY user_id ORDER BY created_at) AS rn,
+ 									concat((user_id),'_', (product_id)) AS user_product
+       							      FROM marketing_campaign) x
+     								 WHERE rn = 1 );
+
+
+## Monthly Percentage Difference
+
+with cte as 
+		(select to_char(created_at,'yyyy-mm') as year_month, sum(value) as revenue
+		 from sf_transactions
+		 group by year_month
+		 order by year_month)
+
+select year_month, round( ((revenue/lag(revenue) over (order by year_month)) - 1) * 100, 2 ) as revenue_diff_pct
+from cte;  
+
+
+## Classify Business Type
+
+select distinct business_name,
+case when position('restaurant' in lower(business_name)) <> 0 then 'restaurant'
+     when position('cafe' in lower(business_name)) <> 0 
+       or position('coffee' in lower(business_name)) <> 0
+       or position('café' in lower(business_name)) <> 0 then 'cafe'
+     when position('school' in lower(business_name)) <> 0 then 'school' 
+     else 'other'
+end as business_type
+from sf_restaurant_health_violations;
+
+
+## Number of violations
+
+select extract(year from inspection_date) as year, count(1) as n_inspections
+from sf_restaurant_health_violations
+where business_name = 'Roxanne Cafe'
+group by extract(year from inspection_date)
+order by extract(year from inspection_date);
+
+
+## Workers With The Highest Salaries
+
+with cte as 
+		(select *,
+		 rank() over (order by salary desc)
+		 from worker w
+		 join title t on t.worker_ref_id = w.worker_id)
+
+select worker_title as best_paid_title
+from cte
+where rank = 1
+order by worker_title;
+
+
+## Salaries Differences
+
+with cte as
+		(select max(salary) as max_salary_e
+		 from db_employee e
+		 join db_dept d on d.id = e.department_id
+		 where department = 'engineering'),
+
+cte2 as 
+	 (select max(salary) as max_salary_m
+	  from db_employee e
+	  join db_dept d on d.id = e.department_id
+	  where department = 'marketing')
+
+select abs(max_salary_e - max_salary_m) as salary_difference 
+from cte cross join cte2;
+
+
+## Employee and Manager Salaries
+
+select e.first_name as employee_name, e.salary as employee_salary
+from employee e
+join employee m on e.manager_id = m.id and e.salary > m.salary;
+
+
+## Popularity of Hack
+
+select location, avg(popularity) as avg_popularity
+from facebook_employees e
+join facebook_hack_survey h on e.id = h.employee_id
+group by location;
+
+
+## Acceptance Rate By Date
+
+with sent as 
+		(select * 
+		 from fb_friend_requests
+		 where action = 'sent'
+		 order by date),
+
+accepted as 
+		(select * 
+		 from fb_friend_requests
+		 where action = 'accepted'
+		 order by date),
+
+data as
+	(select s.date, count(a.action) as accept_count, count(s.action) as sent_count
+	 from sent s
+	 left join accepted a on s.user_id_sender = a.user_id_sender and
+	 s.user_id_receiver = a.user_id_receiver
+	 group by s.date)
+
+select date, cast(accept_count as decimal)/sent_count as percentage_acceptance
+from data
+order by date;
+
+
+## Customer Revenue In March
+
+select cust_id, sum(total_order_cost) as revenue 
+from orders
+where order_date between to_date('2019-03-01', 'yyyy-mm-dd') and to_date('2019-03-31', 'yyyy-mm-dd')
+group by cust_id
+order by revenue desc;
+
+
+## Highest Energy Consumption
+
+with data as 
+		(select * 
+		 from fb_eu_energy 
+
+		 union all
+
+		 select * 
+		 from fb_asia_energy
+
+		 union all
+
+		 select * 
+		 from fb_na_energy),
+
+data2 as
+	  (select date, sum(consumption) as total_energy,
+	   dense_rank() over (order by sum(consumption) desc) as rnk
+         from data 
+	   group by date)
+
+select date, total_energy
+from data2
+where rnk = 1
+order by date;
+
+
+## Users By Average Session Time
+
+with cte as 
+		(select f1.user_id, f1.timestamp::date as date, max(f1.timestamp::time) as load_time, min(f2.timestamp::time) as exit_time
+		 from facebook_web_log f1
+		 join facebook_web_log f2 on f1.user_id = f2.user_id and f1.timestamp::date = f2.timestamp::date
+		 where f1.action ='page_load' and f2.action = 'page_exit'
+		 group by f1.user_id, f1.timestamp::date)
+ 
+select user_id, avg(exit_time - load_time) as avg
+from cte 
+group by user_id;
+
+
+## Popularity Percentage
+
+with cte as 
+		(select user1, count(1)
+		 from facebook_friends
+		 group by user1
+
+		 union
+
+		 select user2, count(1)
+		 from facebook_friends
+		 group by user2),
+
+cte2 as
+	 (select user1,sum(count) as total_friends,
+       count(1) over() as total_users
+	 from cte
+	 group by user1
+	 order by user1)
+
+select user1, 100*(cast(total_friends as decimal)/total_users) as popularity_percent
+from cte2;
+
+
+## Finding Updated Records
+
+select id, first_name, last_name, department_id, max(salary) as current_salary
+from ms_employee_salary
+group by id, first_name, last_name, department_id
+order by id;
+
+
+## Premium vs Freemium
+
+with paying_cust as 
+			(select date, paying_customer, sum(downloads) as paying
+			 from ms_user_dimension u 
+			 join ms_acc_dimension a on u.acc_id = a.acc_id
+			 join ms_download_facts d on u.user_id = d.user_id
+			 where paying_customer = 'yes'
+			 group by date, paying_customer
+			 order by date, paying_customer),
+
+non_paying_cust as 
+			(select date, paying_customer, sum(downloads) as non_paying
+			 from ms_user_dimension u 
+			 join ms_acc_dimension a on u.acc_id = a.acc_id
+			 join ms_download_facts d on u.user_id = d.user_id
+			 where paying_customer = 'no'
+			 group by date, paying_customer
+			 order by date, paying_customer)
+
+select npc.date, non_paying, paying
+from non_paying_cust npc
+join paying_cust pc on npc.date = pc.date and non_paying > paying
+order by date;
+
+
+## Average Salaries
+
+with cte as
+		(select department, avg(salary) as avg
+		 from employee
+		 group by department)
+
+select e.department, first_name, salary, avg
+from employee e
+join cte on e.department = cte.department
+order by e.department;
+
+
+## Highest Target Under Manager
+
+with cte as 
+		(select *,
+		 rank() over (order by target desc)
+		 from salesforce_employees
+		 where manager_id = 13)
+
+select first_name, target
+from cte
+where rank = 1;
+
+
+## Highest Salary In Department
+
+with cte as
+		(select department, first_name as employee_name, salary,
+		 rank() over (partition by department order by salary desc)
+		 from employee)
+
+select department, employee_name, salary
+from cte
+where rank = 1
+order by salary desc;
+
+
+## Reviews of Categories
+
+with cte as
+		(select review_count, unnest(string_to_array(categories, ';')) as category 
+		 from yelp_business)
+
+select category, sum(review_count) as review_cnt
+from cte 
+group by category
+order by sum(review_count) desc;
+
+
+## Top Cool Votes
+
+with cte as
+		(select *,
+		 rank() over (order by cool desc) as rank
+		 from yelp_reviews)
+
+select business_name, review_text
+from cte 
+where rank = 1;
+
+
+## Top 5 States With 5 Star Businesses
+
+with cte as 
+		(select state, count(1) as n_businesses from 
+		 yelp_business
+		 where stars = 5
+		 group by state
+		 order by count(1) desc, state),
+
+cte2 as
+	 (select *, rank() over (order by n_businesses desc)
+	  from cte)
+
+select state, n_businesses 
+from cte2 
+where rank <= 5;
+
+
+## Bikes Last Used
+
+with cte as
+		(select bike_number, max(end_time) as last_used
+		 from dc_bikeshare_q1_2012
+		 group by bike_number)
+
+select * 
+from cte 
+order by last_used desc;
+
+
+## Count the number of movies that Abigail Breslin nominated for oscar
+
+select count(1) as n_movies_by_abi
+from oscar_nominees
+where nominee = 'Abigail Breslin';
+
+
+## Find all posts which were reacted to with a heart
+
+select distinct fr.post_id, fr.poster, post_text, post_keywords, post_date
+from facebook_reactions fr
+join facebook_posts fp on fr.poster = fp.poster and fr.post_id = fp.post_id
+where reaction = 'heart';
+
+
+## Find all wineries which produce wines by possessing aromas of plum, cherry, rose, or hazelnut
+
+--> with cte as 
+		(select *,
+		 case when lower(substring(description, position('plum' in lower(description)), 4)) = 'plum' then 'yes'
+		      when lower(substring(description, position('cherry' in lower(description)), 6)) = 'cherry' then 'yes'
+		      when lower(substring(description, position('rose' in lower(description)), 4)) = 'rose' then 'yes'
+		      when lower(substring(description, position('hazelnut' in lower(description)), 4)) = 'hazelnut' then 'yes'
+		      else 'no'
+		 end as aroma
+		 from winemag_p1)
+
+select distinct winery
+from cte
+where aroma = 'yes';
+
+
+--> alternate solution
+
+select distinct winery 
+from winemag_p1
+where description ilike '%plum%'
+or description ilike '%cherry%'
+or description ilike '%rose%'
+or description ilike '%hazelnut%';
+
+
+## Lyft Driver Wages
+
+select * 
+from lyft_drivers
+where yearly_salary <= 30000 or yearly_salary >= 70000;
+
+
+## Find how many times each artist appeared on the Spotify ranking list
+
+select artist, count(1) as n_occurences
+from spotify_worldwide_daily_song_ranking
+group by artist
+order by count(1) desc;
+
+
+## Find the base pay for Police Captains
+
+select employeename, basepay
+from sf_public_salaries
+where jobtitle ilike '%captain%';
+
+
+## Find libraries who haven't provided the email address in 2016 but their notice preference definition is set to email
+
+select distinct home_library_code
+from library_usage
+where notice_preference_definition = 'email'
+and provided_email_address = FALSE
+and circulation_active_year	= 2016;
+
+
+## Churro Activity Date
+
+select activity_date, pe_description
+from los_angeles_restaurant_health_inspections
+where facility_name = 'STREET CHURROS'
+and score < 95;
+
+
+## Find the most profitable company in the financial sector of the entire world along with its continent
+
+select company, continent
+from forbes_global_2010_2014
+where sector = 'Financials'
+order by profits desc
+limit 1;
+
+
+## Find the rate of processed tickets for each type
+
+with all_comp as
+(select type, count(processed) as count_all from 
+facebook_complaints
+group by type),
+
+processed_comp as
+(select type, count(processed) as count_processed from 
+facebook_complaints
+where processed = TRUE
+group by type)
+
+select ac.type, count_processed::float/count_all as processed_rate
+from all_comp ac
+join processed_comp pc on pc.type = ac.type;
+
+
+##  Number Of Units Per Nationality
+
+select nationality, count(unit_type) as apartment_count
+from airbnb_units au
+left join airbnb_hosts ah on au.host_id = ah.host_id
+where unit_type = 'Apartment' and age < 30
+group by nationality;
+
+
+## Ranking Most Active Guests
+
+select dense_rank() over (order by sum(n_messages) desc) as ranking,
+id_guest, sum(n_messages) as sum_n_messages
+from airbnb_contacts
+group by id_guest;
+
+
+## Number of Streets Per Zip Code
+
+with data as
+(select business_postal_code,
+case when left(business_address, 1) ~ '^[0-9]' then lower(split_part(business_address, ' ', 2))
+    else lower(split_part(business_address, ' ', 1))
+    end as street
+from sf_restaurant_health_violations
+where business_postal_code is not null)
+
+select business_postal_code, count(distinct street) as n_streets
+from data
+group by business_postal_code
+order by count(distinct street) desc, business_postal_code;
+
+
+## Income By Title and Gender
+
+with total_bonus as
+(select worker_ref_id, sum(bonus) as total_bonus
+from sf_bonus
+group by worker_ref_id)
+
+select employee_title, sex, avg(salary + total_bonus) as avg_compensation
+from sf_employee e
+join total_bonus b on e.id = b.worker_ref_id
+group by employee_title, sex;
+
+
+## Largest Olympics
+
+select games, count(distinct name)
+from olympics_athletes_events
+group by games
+order by count(1) desc
+limit 1;
+
+
+## Find the top 10 ranked songs in 2010
+
+select distinct year_rank as rank, group_name, song_name 
+from billboard_top_100_year_end
+where year = 2010 and year_rank <= 10
+order by year_rank;
+
+
+## Count the number of user events performed by MacBookPro users
+
+select event_name, count(1) as event_count 
+from playbook_events
+where device = 'macbook pro'
+group by event_name
+order by count(1) desc;
+
+
+## Find matching hosts and guests in a way that they are both of the same gender and nationality
+
+select distinct host_id, guest_id
+from airbnb_hosts h
+join airbnb_guests g on h.nationality = g.nationality and h.gender = g.gender;
+
+
+## Top Ranked Songs
+
+select trackname, count(1) as times_top1
+from spotify_worldwide_daily_song_ranking
+where position = 1
+group by trackname
+order by count(1) desc;
+
+
+## Top Businesses With Most Reviews
+
+select name, sum(review_count) as review_count
+from yelp_business
+group by name
+order by sum(review_count) desc
+limit 5;
+
+
+## Most Profitable Companies
+
+select company, profits as profit
+from forbes_global_2010_2014
+order by profit desc
+limit 3;
+
+
+## Counting Instances in Text
+
+with data as 
+(select * 
+from ts_stat('select to_tsvector(contents) from google_file_store'))
+
+select word, nentry
+from data
+where word in ('bull', 'bear');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

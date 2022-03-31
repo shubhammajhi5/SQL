@@ -1,0 +1,564 @@
+## Select All
+
+SELECT * FROM CITY;
+
+
+## Select By ID
+
+SELECT * 
+FROM CITY
+WHERE ID = 1661;
+
+
+## Revising the Select Query I
+
+SELECT *
+FROM CITY
+WHERE POPULATION > 100000
+AND COUNTRYCODE = 'USA';
+
+
+## Revising the Select Query II
+
+SELECT NAME 
+FROM CITY 
+WHERE POPULATION > 120000
+AND COUNTRYCODE = 'USA';
+
+
+## Japanese Cities' Attributes
+
+SELECT *
+FROM CITY
+WHERE COUNTRYCODE = 'JPN';
+
+
+## Japanese Cities' Names
+
+SELECT NAME
+FROM CITY
+WHERE COUNTRYCODE = 'JPN';
+
+
+## Weather Observation Station 1
+
+SELECT CITY, STATE
+FROM STATION;
+
+
+## Weather Observation Station 2
+
+select round(sum(lat_n),2), round(sum(long_w),2)
+from station
+
+
+## Weather Observation Station 3
+
+SELECT DISTINCT CITY
+FROM STATION
+WHERE MOD(ID,2) = 0;
+
+
+## Weather Observation Station 4
+
+select (count (city) - count (distinct city)) as diff
+from STATION; 
+
+
+## Weather Observation Station 5
+
+SELECT CITY, LENGTH(CITY) 
+FROM (
+SELECT CITY
+FROM STATION
+ORDER BY LENGTH(CITY), CITY)
+WHERE ROWNUM = 1 ;
+
+SELECT CITY, LENGTH(CITY)
+FROM (
+SELECT CITY
+FROM STATION
+ORDER BY LENGTH(CITY) DESC, CITY )
+WHERE ROWNUM = 1;
+
+
+## Weather Observation Station 6
+
+SELECT DISTINCT CITY
+FROM STATION
+WHERE CITY LIKE 'A%'
+OR CITY LIKE 'E%'
+OR CITY LIKE 'I%'
+OR CITY LIKE 'O%'
+OR CITY LIKE 'U%'
+OR CITY LIKE 'a%'
+OR CITY LIKE 'e%'
+OR CITY LIKE 'i%'
+OR CITY LIKE 'o%'
+OR CITY LIKE 'u%';
+
+
+## Weather Observation Station 7
+
+SELECT DISTINCT CITY 
+FROM STATION
+WHERE CITY LIKE '%a'
+OR CITY LIKE '%e'
+OR CITY LIKE '%i'
+OR CITY LIKE '%o'
+OR CITY LIKE '%u';
+
+
+## Weather Observation Station 8
+
+SELECT DISTINCT CITY 
+FROM STATION
+WHERE (CITY LIKE 'A%' OR CITY LIKE 'E%' OR CITY LIKE 'I%' OR CITY LIKE 'O%' OR CITY LIKE 'U%')
+AND
+(CITY LIKE '%a' OR CITY LIKE '%e' OR CITY LIKE '%i' OR CITY LIKE '%o' OR CITY LIKE '%u');
+
+
+## Weather Observation Station 9
+
+SELECT DISTINCT CITY
+FROM STATION
+WHERE SUBSTR(CITY, 1, 1) NOT IN ('A','E','I','O','U');
+
+
+## Weather Observation Station 10
+
+SELECT DISTINCT CITY 
+FROM STATION
+WHERE SUBSTR (CITY, -1,1) NOT IN ('a', 'e', 'i', 'o', 'u');
+
+
+## Weather Observation Station 11
+
+select distinct city 
+from station
+where city not rlike '^[AEIOUaeiou].*[AEIOUaeiou]$';
+
+
+## Weather Observation Station 12
+
+SELECT DISTINCT CITY 
+FROM STATION
+WHERE CITY NOT LIKE 'A%'
+AND CITY NOT LIKE 'E%'
+AND CITY NOT LIKE 'I%'
+AND CITY NOT LIKE 'O%'
+AND CITY NOT LIKE 'U%'
+AND CITY NOT LIKE '%a'
+AND CITY NOT LIKE '%e'
+AND CITY NOT LIKE '%i'
+AND CITY NOT LIKE '%o'
+AND CITY NOT LIKE '%u';
+
+
+## Weather Observation Station 13
+
+SELECT ROUND(SUM(LAT_N),4)
+FROM STATION
+WHERE LAT_N BETWEEN 38.7889 AND 137.2345;
+
+
+## Weather Observation Station 14
+
+SELECT ROUND(MAX(LAT_N), 4)
+FROM STATION
+WHERE LAT_N < 137.2345
+
+
+## Weather Observation Station 15
+
+SELECT ROUND(LONG_W,4)
+FROM STATION
+WHERE LAT_N = (SELECT MAX(LAT_N) 
+		   FROM STATION
+		   WHERE LAT_N < 137.2345)
+
+
+## Weather Observation Station 16
+
+SELECT ROUND(MIN(LAT_N),4)
+FROM STATION
+WHERE LAT_N > 38.7780
+
+
+## Weather Observation Station 17
+
+SELECT ROUND(LONG_W,4)
+FROM STATION
+WHERE LAT_N = (SELECT MIN(LAT_N)
+		   FROM STATION
+		   WHERE LAT_N > 38.7780)
+
+
+## Weather Observation Station 18
+
+SELECT ROUND(ABS(MIN(LAT_N) - MAX(LAT_N)),4) + ROUND(ABS(MIN(LONG_W) - MAX(LONG_W)),4)
+FROM STATION
+
+
+## Weather Observation Station 19
+
+select round(sqrt(pow((max(lat_n) - min(lat_n)),2) + pow((max(long_w) - min(long_w)),2)),4)
+from station
+
+
+## Weather Observation Station 20
+
+select trunc(median(lat_n),4) 
+from station
+
+
+## Higher Than 75 Marks
+
+SELECT NAME 
+FROM STUDENTS
+WHERE MARKS > 75
+ORDER BY RIGHT(NAME, 3), ID;
+
+
+## Employee Names
+
+SELECT NAME 
+FROM EMPLOYEE
+ORDER BY NAME
+
+
+## Employee Salaries
+
+SELECT NAME 
+FROM EMPLOYEE 
+WHERE SALARY > 2000 AND MONTHS < 10
+ORDER BY EMPLOYEE_ID
+
+
+## Type of Triangle
+
+select 
+(case 
+	when not (a + b > c and b + c > a and c + a > b) then 'Not A Triangle'
+	when a = b and b = c then 'Equilateral'
+	when a = b or b = c or c = a then 'Isosceles'
+	else 'Scalene'
+end)
+from triangles;
+
+
+## The PADS
+
+select concat(name,'(',substring(occupation,1,1),')')
+from occupations
+order by name asc;
+
+select concat('There are a total of ',cast(count(1) as char),' ',lower(occupation),'s.') from occupations
+group by occupation
+order by count(1) asc;
+
+
+## Occupations
+
+select doctor, professor, singer, actor
+from (select * 
+	from (select name,occupation, row_number() over (partition by occupation order by name) as row_num
+		from occupations
+		order by name)
+		pivot 
+		(min(name) for
+       	occupation in ('Doctor' as doctor,
+		       	   'Professor' as professor,
+			         'Singer' as singer,
+			         'Actor' as actor)
+		)
+  		order by row_num);
+
+
+## Binary Tree Nodes
+
+select
+case 
+    when p is NULL then concat(n, ' Root')
+    when n in (select distinct p from bst) then concat(n, ' Inner')
+    else concat(n, ' Leaf')
+end
+from bst
+order by n asc;
+
+
+## New Companies
+
+select c.company_code, c.founder,
+count(distinct lm.lead_manager_code),
+count(distinct sm.senior_manager_code),
+count(distinct m.manager_code),
+count(distinct e.employee_code)
+
+from company as c
+join lead_manager as lm on c.company_code = lm.company_code
+join senior_manager as sm on lm.lead_manager_code = sm.lead_manager_code
+join manager as m on sm.senior_manager_code = m.senior_manager_code
+join employee as e on m.manager_code = e.manager_code
+
+group by c.company_code, c.founder
+order by company_code;
+
+
+## Revising Aggregations - The Count Function
+
+select count(*)
+from city 
+where population > 100000;
+
+
+## Revising Aggregations - The Sum Function
+
+select sum(population)
+from city 
+where district = 'California';
+
+
+## Revising Aggregations - Averages
+
+select avg(population)
+from city
+where district = 'California';
+
+
+## Average Population
+
+select floor(avg(population))
+from city;
+
+
+## Japan Population
+
+select sum(population)
+from city
+where countrycode = 'JPN';
+
+
+## Population Density Difference
+
+SELECT MAX(POPULATION) - MIN(POPULATION)
+FROM CITY;
+
+
+## The Blunder
+
+select ceil(avg(salary) - avg(replace(salary, '0', '')))
+from employees;
+
+
+## Top Earners
+
+with temp as 
+		( select *, (salary * months) as earnings, rank() over (order by (salary * months) desc) as rank
+ 		 from employee )
+
+select concat(max(earnings),'  ',(select count(1) 
+					    from temp
+					    where rank = 1)) 
+from temp;
+
+
+## Population Census
+
+select sum(ct.population)
+from city ct
+join country cr on ct.countrycode = cr.code
+where cr.continent = 'Asia';
+
+
+## African Cities
+
+select ct.name
+from city ct
+join country cr on cr.code = ct.countrycode
+where cr.continent = 'Africa';
+
+
+## Average Population of Each Continent
+
+select cr.continent, floor(avg(ct.population))
+from city ct
+join country cr on cr.code = ct.countrycode
+group by cr.continent;
+
+
+## The Report
+
+select 
+case when grade < 8 then NULL 
+     else name 
+end as name, 
+grade, marks
+
+from students hs
+join grades hg on hs.marks between hg.min_mark and hg.max_mark
+
+order by grade desc, name, marks;
+
+
+## Top Competitors
+
+select h.hacker_id, h.name
+from submissions s 
+join hackers h on s.hacker_id = h.hacker_id
+join challenges c on s.challenge_id = c.challenge_id
+join difficulty d on c.difficulty_level = d.difficulty_level
+where s.score = d.score
+group by h.hacker_id, h.name
+having count(1) > 1
+order by count(1) desc, h.hacker_id;
+
+
+## Ollivander's Inventory
+
+select w.id, p.age, w.coins_needed, w.power
+from wands w
+join wands_property p on w.code = p.code
+where w.coins_needed = (select min(w2.coins_needed)
+				from wands w2
+				join wands_property p2 on w2.code = p2.code
+				where p2.is_evil = 0
+				and p.age = p2.age
+				and w.power = w2.power)
+order by w.power desc, p.age desc;
+
+
+## Challenges
+
+with cte as 
+		(select c.hacker_id as id, h.name as name, count(1) as no_of_challenges,
+		 dense_rank() over (order by count(1) desc) as rank,
+		 count(1) over (partition by count(1) ) as cnt
+   		 from challenges c
+		 join hackers h on c.hacker_id = h.hacker_id
+		 group by c.hacker_id, h.name)
+
+select id, name, no_of_challenges 
+from cte
+where rank = 1 or cnt = 1
+order by no_of_challenges desc , id;
+
+
+## Contest Leaderboard
+
+with cte as
+		(select s.hacker_id as id, h.name as name, s.challenge_id as challenge_id, max(score) as max_score
+		 from submissions s
+		 join hackers h on s.hacker_id = h.hacker_id
+		 group by s.hacker_id, h.name, challenge_id),
+
+cte2 as 
+	(select id, name, sum(max_score) as total_score
+ 	 from cte
+ 	 group by id, name
+  	 having sum(max_score) <> 0)
+
+select * from cte2
+order by total_score desc, id;
+
+
+## SQL Project Planning
+
+
+with t1 as 
+		(select start_date,
+		 rank() over ( order by start_date ) as rank_start
+		 from projects
+		 where start_date not in ( select end_date from projects )),
+
+t2 as 
+	(select end_date,
+	 rank() over ( order by end_date ) as rank_end
+	 from projects
+ 	 where end_date not in ( select start_date from projects ))
+
+select start_date, end_date
+from t1, t2
+where rank_start = rank_end
+order by datediff(day,start_date,end_date), start_date;
+
+
+## Placements
+
+with t1 as 
+		(select s1.name as person, s2.name as friend, p1.salary as person_salary, p2.salary as friend_salary
+		 from students s1
+		 join friends f on f.id = s1.id 
+		 join students s2 on f.friend_id = s2.id
+		 join packages p1 on p1.id = s1.id
+		 join packages p2 on p2.id = s2.id)
+
+select person
+from t1
+where friend_salary > person_salary
+order by friend_salary;
+
+
+## Symmetric Pairs
+
+select f1.x, f1.y
+from functions f1, functions f2
+where f1.x = f2.y and f1.y = f2.x
+group by f1.x, f1.y
+having f1.y > f1.x or count(f1.x) > 1
+order by f1.x;
+
+
+## Interviews
+
+with total_submit as 
+			  (select coll.contest_id, sum(total_submissions) as sumts, sum(total_accepted_submissions) as sumtas
+			   from colleges coll
+			   join challenges chal on coll.college_id = chal.college_id
+			   join submission_stats ss on chal.challenge_id = ss.challenge_id
+			   group by coll.contest_id),
+
+total_view as 
+		 (select coll.contest_id, sum(total_views) as sumtv, sum(total_unique_views) as sumtuv
+		  from colleges coll
+		  join challenges chal on coll.college_id = chal.college_id
+		  join view_stats vs on chal.challenge_id = vs.challenge_id
+		  group by coll.contest_id)
+
+select cont.contest_id, hacker_id, name, sumts, sumtas, sumtv, sumtuv
+from contests cont
+join total_submit ts on cont.contest_id = ts.contest_id
+join total_view tv on cont.contest_id = tv.contest_id
+where sumts > 0 and sumtas > 0 and sumtv > 0 and sumtuv > 0
+order by cont.contest_id;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
