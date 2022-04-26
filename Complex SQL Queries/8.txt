@@ -1,0 +1,14 @@
+# query to find for each seller, whether the brand of the second item (by date) they sold is their favorite item.
+if a seller have less than two sales then also display output as 'no'
+
+-->
+with rnkord as
+(select *, rank() over (partition by seller_id order by order_date)
+from orders)
+
+select user_id as seller_id,
+case when favorite_brand = item_brand then 'Yes' else 'No' end as "2nd_item_fav_brand"
+from users u
+left join rnkord ro on u.user_id = ro.seller_id and rank = 2
+left join items i on i.item_id = ro.item_id
+ 

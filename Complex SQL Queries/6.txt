@@ -1,0 +1,22 @@
+-->
+with raw as
+(
+	select p.*, friend_id
+	from person p
+	join friends f on p.person_id = f.person_id
+),
+final as
+(
+	select p.*, f.name as friend_name, f.email as friend_email, f.score as friend_score
+	from raw p
+	join person f on p.friend_id = f.person_id
+	order by 1
+)
+
+select person_id, name, count(1) as no_of_friends, sum(friend_score) as friends_score_total 
+from final
+group by person_id, name
+having sum(friend_score) > 100
+
+
+

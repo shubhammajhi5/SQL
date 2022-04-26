@@ -1,0 +1,11 @@
+write a query to provide date for Nth occurence of sunday from given date
+
+
+
+-->
+with
+    today_date AS (VALUES ('2022-01-01'::date)),
+    n AS (VALUES (3))
+
+select ((table today_date) + interval '1 day' * (7 - date_part('dow', (table today_date))))
++ ((table n)-1) * interval '1 week' as date_on_sunday

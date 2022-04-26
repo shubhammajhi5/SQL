@@ -1,0 +1,31 @@
+find second most recent activity of a user
+and if user has only 1 activoty then return that as it is.
+
+create table user_activity
+(
+username      varchar(20) ,
+activity      varchar(20),
+startDate     Date   ,
+endDate      Date
+);
+
+insert into user_activity values 
+('Alice','Travel','2020-02-12','2020-02-20'),
+('Alice','Dancing','2020-02-21','2020-02-23'),
+('Alice','Travel','2020-02-24','2020-02-28'),
+('Bob','Travel','2020-02-11','2020-02-18');
+
+select * from user_activity;
+
+
+
+-->
+with data as
+(select *,
+count(1) over (partition by username) as total_activities,
+rank() over (partition by username order by startdate) 
+from user_activity)
+
+select username, activity 
+from data
+where rank = 2 or total_activities = 1

@@ -1,0 +1,51 @@
+# pivot/unpivot with using predefined functions
+
+create table emp_compensation 
+(
+emp_id int,
+component varchar(20),
+val int
+);
+
+insert into emp_compensation values 
+(1,'salary',10000),
+(1,'bonus',5000),
+(1,'hike_percent',10),
+(2,'salary',15000),
+(2,'bonus',7000),
+(2,'hike_percent',8),
+(3,'salary',12000),
+(3,'bonus',6000),
+(3,'hike_percent',7);
+
+select * from emp_compensation;
+
+
+
+-->
+
+# pivot
+
+select emp_id,
+sum(case when component = 'salary' then val end) as salary,
+sum(case when component = 'bonus' then val end) as bonus,
+sum(case when component = 'hike_percent' then val end) as hike_percent
+from emp_compensation
+group by emp_id
+order by emp_id
+
+
+# unpivot
+
+select emp_id, 'salary' as component, salary as val
+from emp_compensation_pivot
+
+union all
+
+select emp_id, 'bonus' as component, bonus as val
+from emp_compensation_pivot
+
+union all
+
+select emp_id, 'hike_percent' as component, hike_percent as val
+from emp_compensation_pivot

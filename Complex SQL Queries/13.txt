@@ -1,0 +1,62 @@
+Given the following two tables, return the fraction of users, rounded to two decimal places,
+who accessed Amazon music and upgraded to prime membership within the first 30 days of signing up
+
+create table users
+(
+user_id integer,
+name varchar(20),
+join_date date
+);
+
+insert into users values 
+(1, 'Jon', CAST('14-2-2020' AS date)), 
+(2, 'Jane', CAST('14-2-2020' AS date)), 
+(3, 'Jill', CAST('15-2-2020' AS date)), 
+(4, 'Josh', CAST('15-2-2020' AS date)), 
+(5, 'Jean', CAST('16-2-2020' AS date)), 
+(6, 'Justin', CAST('17-2-2020' AS date)),
+(7, 'Jeremy', CAST('18-2-2020' AS date));
+
+select * from users;
+
+create table events
+(
+user_id integer,
+type varchar(10),
+access_date date
+);
+
+insert into events values
+(1, 'Pay', CAST('1-3-2020' AS date)), 
+(2, 'Music', CAST('2-3-2020' AS date)), 
+(2, 'P', CAST('12-3-2020' AS date)),
+(3, 'Music', CAST('15-3-2020' AS date)), 
+(4, 'Music', CAST('15-3-2020' AS date)), 
+(1, 'P', CAST('16-3-2020' AS date)), 
+(3, 'P', CAST('22-3-2020' AS date));
+
+select * from events;
+
+
+
+-->
+with data as
+(select u.*, type, access_date, access_date - join_date as diff
+from users u
+join events e on e.user_id = u.user_id 
+where u.user_id in (select user_id from events where type = 'Music')),
+
+total_users as
+(select 
+count(distinct user_id) as tu
+from data),
+
+valid_users as
+(select 
+count(distinct user_id) vu
+from data
+where type = 'P' and diff <= 30)
+
+select *, round(100*(vu::numeric/tu), 2)||' %' as pct_users
+from total_users
+cross join valid_users

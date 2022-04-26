@@ -1,0 +1,37 @@
+create table entries 
+( 
+name varchar(20),
+address varchar(20),
+email varchar(20),
+floor int,
+resources varchar(10)
+);
+
+insert into entries values 
+('A','Bangalore','A@gmail.com',1,'CPU'),
+('A','Bangalore','A1@gmail.com',1,'CPU'),
+('A','Bangalore','A2@gmail.com',2,'DESKTOP'),
+('B','Bangalore','B@gmail.com',2,'DESKTOP'),
+('B','Bangalore','B1@gmail.com',2,'DESKTOP'),
+('B','Bangalore','B2@gmail.com',1,'MONITOR');
+
+select * from entries;
+
+
+
+-->
+with floor as
+(select name, floor, count(1),
+rank() over(partition by name order by count(1) desc)
+from entries
+group by name, floor),
+
+data as
+(select name, count(1) as total_visits, string_agg(distinct resources, ',') as resources_used
+from entries
+group by name)
+
+select d.name, total_visits, floor as most_visited_floor, resources_used
+from data d
+join floor f on f.name = d.name
+where f.rank = 1

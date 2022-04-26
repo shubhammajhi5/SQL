@@ -1,0 +1,47 @@
+## total charges as per billing rate
+
+create table billings 
+(
+emp_name varchar(10),
+bill_date date,
+bill_rate int
+);
+
+insert into billings values
+('Sachin','01-JAN-1990',25),
+('Sehwag' ,'01-JAN-1989', 15),
+('Dhoni' ,'01-JAN-1989', 20),
+('Sachin' ,'05-Feb-1991', 30);
+
+create table hours_worked 
+(
+emp_name varchar(20),
+work_date date,
+bill_hrs int
+);
+
+insert into hours_worked values
+('Sachin', '01-JUL-1990' ,3),
+('Sachin', '01-AUG-1990', 5),
+('Sehwag','01-JUL-1990', 2),
+('Sachin','01-JUL-1991', 4);
+
+select * from billings;
+select * from hours_worked;
+
+
+
+-->
+with bill as 
+(select *,
+lead(bill_date, 1, '9999-12-31') over (partition by emp_name order by bill_date) - 1 as bill_date_end
+from billings),
+
+data as
+(select *, b.bill_rate * hw.bill_hrs as charges, b.emp_name as emp
+from bill b
+join hours_worked hw on b.emp_name = hw.emp_name and hw.work_date between b.bill_date and b.bill_date_end)
+
+select emp, sum(charges) as total_charges
+from data
+group by emp

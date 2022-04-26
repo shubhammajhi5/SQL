@@ -1,0 +1,91 @@
+# find the missing quarters
+
+create table stores
+(
+store varchar(10),
+quarter varchar(10),
+amount int
+);
+
+insert into stores values
+('S1', 'Q1', 200),
+('S1', 'Q2', 300),
+('S1', 'Q4', 400),
+('S2', 'Q1', 500),
+('S2', 'Q3', 600),
+('S2', 'Q4', 700),
+('S3', 'Q1', 800),
+('S3', 'Q2', 750),
+('S3', 'Q3', 900);
+
+select * from stores;
+
+
+
+-->
+
+method 1
+
+with data as
+(select *,
+right(quarter, 1)::int as quarter_no
+from stores)
+
+select store, 'Q'||(10 - sum(quarter_no))::varchar as missing_quarter
+from data
+group by store
+
+
+method 2
+
+with recursive data as
+(
+	select distinct store, 1 as quarter_no
+	from stores
+	
+	union all
+	
+	select store, quarter_no + 1 as quarter_no
+	from data
+	where quarter_no < 4 
+),
+
+raw as
+(
+	select *,
+	right(quarter, 1)::int as quarter_no
+	from stores
+),
+
+final as
+(
+	select d.store as all_store, 'Q'||d.quarter_no as all_quarter, r.*
+	from data d
+	left join raw r on d.quarter_no = r.quarter_no and d.store = r.store
+)
+
+select all_store as store, all_quarter as missing_quarter
+from final 
+where store is null
+order by 1
+
+
+method 3
+
+with data as
+(
+	select distinct s1.store, s2.quarter
+	from stores s1
+	cross join stores s2
+),
+
+final as
+(
+	select d.store as all_store, d.quarter as all_quarter, s.*
+	from data d
+	left join stores s on d.quarter = s.quarter and d.store = s.store
+)
+
+select all_store as store, all_quarter as missing_quarter
+from final
+where quarter is null

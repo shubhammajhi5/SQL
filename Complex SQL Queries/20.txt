@@ -1,0 +1,42 @@
+# students with same marks in physics and chemistry
+
+create table exams 
+(
+	student_id int,
+	subject varchar(20),
+	marks int
+);
+
+insert into exams values 
+(1,'Chemistry',91),
+(1,'Physics',91),
+(2,'Chemistry',80),
+(2,'Physics',90),
+(3,'Chemistry',80),
+(4,'Chemistry',71),
+(4,'Physics',54);
+
+select * from exams;
+
+
+
+-->
+
+method 1
+
+with data as
+(select *, p.student_id as student, p.marks - c.marks as diff
+from exams p
+join exams c on p.student_id = c.student_id and p.subject <> c.subject)
+
+select distinct student as student_id
+from data 
+where diff = 0
+
+
+method 2
+
+select student_id
+from exams
+group by student_id
+having count(distinct subject) = 2 and count(distinct marks) = 1

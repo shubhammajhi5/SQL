@@ -1,0 +1,20 @@
+-- pareto 80-20 principle
+
+with 
+total as
+(
+	select sum(sales) as total_sales, 0.8 * sum(sales) as eighty_per_sales
+	from orders
+),
+data as
+(
+	select product_id, sum(sales) as sales,
+	sum(sum(sales)) over (order by sum(sales) desc) as rolling
+	from orders
+	group by product_id
+	order by 2 desc
+)
+
+select product_id
+from data
+where rolling <= (select eighty_per_sales from total)

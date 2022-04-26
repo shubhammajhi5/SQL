@@ -1,0 +1,26 @@
+-->
+with scores as
+(
+	select first_player as player_id, first_score as score
+	from matches
+	union all
+	select second_player as player_id, second_score as score
+	from matches
+),
+data as
+(
+	select player_id, sum(score) as total_score
+	from scores
+	group by player_id 
+),
+final as
+(
+	select p.*, total_score,
+	rank() over (partition by group_id order by total_score desc, p.player_id) as rank
+	from players p
+	join data d on d.player_id =  p.player_id
+)
+
+select group_id, player_id as winner, total_score
+from final
+where rank = 1
