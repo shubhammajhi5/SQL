@@ -1,0 +1,49 @@
+# categorize the users on the basis of test results
+  in order to get health insurance
+
+
+create table tests
+(
+	id int,
+	type varchar,
+	score int
+);
+
+insert into tests values
+(1, 'RLS', 12),
+(1, 'KLP', 5),
+(1, 'BMI', 3),
+(2, 'RLS', 10),
+(2, 'KLP', 6),
+(2, 'BMI', 5),
+(3, 'RLS', 8),
+(3, 'KLP', 4),
+(3, 'BMI', 5),
+(4, 'RLS', 8),
+(4, 'KLP', 2),
+(4, 'BMI', 6),
+(5, 'RLS', 8),
+(5, 'KLP', 2),
+(5, 'BMI', 4);
+
+select * from tests;
+
+
+
+-->
+with tests_scores as
+(select id,
+sum(case when type = 'RLS' then score end) as rls,
+sum(case when type = 'KLP' then score end) as klp,
+sum(case when type = 'BMI' then score end) as bmi,
+sum(case when type = 'RLS' then score end) + sum(case when type = 'KLP' then score end) + sum(case when type = 'BMI' then score end) as total_score
+from tests
+group by id
+order by id)
+
+select *,
+case when total_score > 20 then 'Low'
+when total_score between 16 and 20 then 'Moderate'
+else 'High'
+end as risk
+from tests_scores
