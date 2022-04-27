@@ -1,0 +1,33 @@
+# find 3 days average of the user
+
+create table sessions
+(
+	logged_on date,
+	time_spent int
+);
+
+insert into sessions values
+('2022-04-01', 70),
+('2022-04-02', 30),
+('2022-04-03', 120),
+('2022-04-04', 40),
+('2022-04-05', 80),
+('2022-04-06', 150),
+('2022-04-07', 100),
+('2022-04-08', 50),
+('2022-04-09', 65),
+('2022-04-10', 125),
+('2022-04-11', 75),
+('2022-04-12', 90),
+('2022-04-13', 105),
+('2022-04-14', 220),
+('2022-04-15', 190);
+
+select * from sessions;
+
+
+
+-->
+select *,
+round(avg(time_spent) over (order by logged_on rows between 2 preceding and current row), 4) as three_day_avg
+from sessions
