@@ -1,0 +1,80 @@
+# find city with lowest and highest donor to acceptor ratio
+  ratio = total amt of blood donated / total amount of blood needed
+
+create table donor
+(
+	name varchar,
+	city varchar,
+	amount int
+);
+
+insert into donor values
+('Raja', 'New Delhi', 4),
+('Ram', 'New Delhi', 2),
+('Mohan', 'Banglore', 3),
+('Roy', 'Kolkata', 6),
+('Neel', 'Banglore', 1),
+('Nitin', 'Mumbai', 2),
+('Mukesh', 'Mumbai', 5),
+('Amar', 'Kolkata', 4),
+('Akbar', 'Mumbai', 7),
+('Anthony', 'New Delhi', 2),
+('Vivek', 'New Delhi', 4),
+('Riya', 'Mumbai', 7),
+('Amar', 'Banglore', 3),
+('Anjali', 'Kolkata', 3),
+('Ankita', 'Banglore', 5);
+
+select * from donor;
+
+
+create table acceptor
+(
+	name varchar,
+	city varchar,
+	amount int
+);
+
+insert into acceptor values
+('Abhay', 'Mumbai', 2),
+('Aditya', 'New Delhi', 1),
+('Niharika', 'Kolkata', 2),
+('Ashish', 'Kolkata', 5),
+('Sumit', 'Banglore', 1),
+('Preeti', 'New Delhi', 1),
+('Sangeeta', 'Mumbai', 3),
+('Vikas', 'Mumbai', 2),
+('Sandeep', 'Banglore', 5),
+('Sailendra', 'New Delhi', 2),
+('Prakash', 'Kolkata', 3),
+('Sheela', 'New Delhi', 4),
+('Poonam', 'Mumbai', 2),
+('Rachna', 'Kolkata', 3),
+('Neeraj', 'Mumbai', 4);
+
+select * from acceptor;
+
+
+
+-->
+with donor_list as
+(select city, sum(amount) as donor_total
+from donor
+group by city),
+
+acceptor_list as
+(select city, sum(amount) as acceptor_total
+from acceptor
+group by city),
+
+final as
+(select d.city, donor_total, acceptor_total,
+round(donor_total/acceptor_total::decimal, 4) as donor_acceptor_ratio,
+rank() over (order by donor_total/acceptor_total::decimal) as rn_low,
+rank() over (order by donor_total/acceptor_total::decimal desc) as rn_high
+from donor_list d
+join acceptor_list a on d.city = a.city)
+
+select city, donor_acceptor_ratio
+from final
+where rn_low = 1 or rn_high = 1
