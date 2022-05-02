@@ -1,0 +1,33 @@
+# find total no of messages exchanged between each person per day
+
+CREATE TABLE messages 
+(
+ sms_date date ,
+ sender varchar(20) ,
+ receiver varchar(20) ,
+ no_of_sms int
+);
+
+INSERT INTO messages VALUES ('2020-4-1', 'Avinash', 'Vibhor',10);
+INSERT INTO messages VALUES ('2020-4-1', 'Vibhor', 'Avinash',20);
+INSERT INTO messages VALUES ('2020-4-1', 'Avinash', 'Pawan',30);
+INSERT INTO messages VALUES ('2020-4-1', 'Pawan', 'Avinash',20);
+INSERT INTO messages VALUES ('2020-4-1', 'Vibhor', 'Pawan',5);
+INSERT INTO messages VALUES ('2020-4-1', 'Pawan', 'Vibhor',8);
+INSERT INTO messages VALUES ('2020-4-1', 'Vibhor', 'Deepak',50);
+
+select * from messages;
+
+
+
+-->
+with data as
+(select sms_date,
+case when sender < receiver then sender else receiver end as person_1,
+case when sender < receiver then receiver else sender end as person_2,
+no_of_sms
+from messages)
+
+select sms_date, person_1, person_2, sum(no_of_sms) as total_msg
+from data
+group by sms_date, person_1, person_2
