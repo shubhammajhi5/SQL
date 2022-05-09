@@ -1,0 +1,80 @@
+1) student who scored above average marks in each subject
+2) % of student who scored more than 90 in any subject among the total students
+3) find second highest and second lowest marks for each subject
+4) from each student and test identify if their marks increased or decreased from previous test
+
+
+create table students
+(
+ studentid int,
+ studentname varchar,
+ subject varchar,
+ marks int,
+ testid int,
+ testdate date
+)
+
+insert into students values (2,'Max Ruin','Subject1',63,1,'2022-01-02');
+insert into students values (3,'Arnold','Subject1',95,1,'2022-01-02');
+insert into students values (4,'Krish Star','Subject1',61,1,'2022-01-02');
+insert into students values (5,'John Mike','Subject1',91,1,'2022-01-02');
+insert into students values (4,'Krish Star','Subject2',71,1,'2022-01-02');
+insert into students values (3,'Arnold','Subject2',32,1,'2022-01-02');
+insert into students values (5,'John Mike','Subject2',61,2,'2022-11-02');
+insert into students values (1,'John Deo','Subject2',60,1,'2022-01-02');
+insert into students values (2,'Max Ruin','Subject2',84,1,'2022-01-02');
+insert into students values (2,'Max Ruin','Subject3',29,3,'2022-01-03');
+insert into students values (5,'John Mike','Subject3',98,2,'2022-11-02');
+
+select * from students;
+
+
+
+
+1) -->
+
+with data as
+(select *,
+round(avg(marks) over(partition by subject), 2) as sub_avg
+from students)
+
+select *
+from data
+where marks > sub_avg
+
+
+2) -->
+
+select 
+count(distinct case when marks > 90 then studentid else null end)::float/count(distinct studentid) * 100 as perc_stud
+from students
+
+
+3) -->
+
+with data as
+(select *,
+row_number() over (partition by subject order by marks) as low,
+row_number() over (partition by subject order by marks desc) as high
+from students)
+
+select subject,
+sum(case when low = 2 then marks else null end) as second_lowest,
+sum(case when high = 2 then marks else null end) as second_highest
+from data
+group by subject
+
+
+4) -->
+
+with data as
+(select *,
+lag(marks) over (partition by studentid order by testdate, subject) as prev_marks
+from students
+order by studentid, testdate, subject)
+
+select *,
+case when prev_marks > marks then 'Increased' 
+when prev_marks < marks then 'Decreased'
+else null end as prev_test_comparison
+from data
