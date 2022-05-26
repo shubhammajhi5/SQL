@@ -1,0 +1,58 @@
+## Pivot the data according to the team wise players in each column
+
+
+create table players_teams
+(
+	name varchar,
+	team varchar
+);
+
+
+insert into players_teams values
+('KL Rahul', 'LSG'),
+('Rohit Sharma', 'MI'),
+('Hardik Pandya', 'GT'),
+('Sanju Samson', 'RR'),
+('Virat Kohli', 'RCB'),
+('Faf Du Plesis', 'RCB'),
+('Kane Williamson', 'SRH'),
+('Mayank Agarwal', 'PK'),
+('MS Dhoni', 'CSK'),
+('Rishabh Pant', 'DC'),
+('Shreyas Iyer', 'KKR'),
+('Deepak Hooda', 'LSG'),
+('Suryakumar Yadav', 'MI'),
+('Shubhman Gill', 'GT'),
+('Yuzvendra Chahal', 'RR'),
+('Shikhar Dhawan', 'PK'),
+('Ravindra Jadeja', 'CSK'),
+('David Warner', 'DC'),
+('Andre Russel', 'KKR'),
+('Glenn Maxwell', 'RCB'),
+('Ishan Kishan', 'MI'),
+('Ravichandran Ashwin', 'RR');
+
+
+
+-->
+
+with data as
+(select *
+, row_number() over(partition by team order by name) as player_groups
+from players_teams)
+
+select 
+  max(case when team = 'MI' then name else null end) as MI
+, max(case when team = 'CSK' then name else null end) as CSK
+, max(case when team = 'KKR' then name else null end) as KKR
+, max(case when team = 'SRH' then name else null end) as SRH
+, max(case when team = 'RR' then name else null end) as RR
+, max(case when team = 'RCB' then name else null end) as RCB
+, max(case when team = 'DC' then name else null end) as DC
+, max(case when team = 'PK' then name else null end) as PK
+, max(case when team = 'GT' then name else null end) as GT
+, max(case when team = 'LSG' then name else null end) as LSG
+from data 
+group by player_groups
+order by player_groups
+
