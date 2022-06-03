@@ -1,0 +1,217 @@
+## BIG DATA PROGRAM CASE STUDY
+
+
+CREATE TABLE sales (
+"student_id" VARCHAR(5),
+"order_date" DATE,
+"course_id" INTEGER
+);
+
+INSERT INTO sales
+("student_id", "order_date", "course_id")
+VALUES
+('ABC', '2022-01-01', '1'),
+('ABC', '2022-01-01', '2'),
+('ABC', '2022-01-07', '2'),
+('ABC', '2022-01-10', '3'),
+('ABC', '2022-01-11', '3'),
+('ABC', '2022-01-11', '3'),
+('BCD', '2022-01-01', '2'),
+('BCD', '2022-01-02', '2'),
+('BCD', '2022-01-04', '1'),
+('BCD', '2022-01-11', '1'),
+('BCD', '2022-01-16', '3'),
+('BCD', '2022-02-01', '3'),
+('CDE', '2022-01-01', '3'),
+('CDE', '2022-01-01', '3'),
+('CDE', '2022-01-07', '3')
+
+select * from sales;
+
+
+
+CREATE TABLE course (
+"course_id" INTEGER,
+"course_name" VARCHAR(10),
+"price" INTEGER
+);
+
+INSERT INTO course
+("course_id", "course_name", "price")
+VALUES
+('1', 'Hadoop', '12000'),
+('2', 'Spark', '15000'),
+('3', 'Scala', '15000');
+
+select * from course;
+
+
+
+CREATE TABLE student (
+"student_id" VARCHAR(5),
+"joining_date" DATE
+);
+
+INSERT INTO student
+("student_id", "joining_date")
+VALUES
+('ABC', '2022-01-07'),
+('BCD', '2022-01-09');
+
+select * from student;
+
+
+
+
+--> 
+
+1) What is the total amount each student spent in the BigDataProgram?
+
+select s.student_id, sum(price) as total_price_spent
+from sales s
+join course c on c.course_id = s.course_id
+group by s.student_id
+
+
+2) How many days has each student visited the BigDataProgram?
+
+select student_id, count(distinct order_date) as no_of_days_visited
+from sales 
+group by student_id
+
+
+3) What was the first item from the course purchased by each student?
+
+with data as
+(select *,
+rank() over (partition by student_id order by order_date) as rnk
+from sales)
+
+select student_id, course_name, order_date
+from data d
+join course c on c.course_id = d.course_id
+where rnk = 1
+
+
+4) What is the most purchased course from the courses and how many times was it purchased by all students?
+
+select course_name, count(1) as no_of_purchase
+from sales s
+join course c on c.course_id = s.course_id
+group by course_name
+order by 2 desc
+limit 1;
+
+select student_id, count(1) as no_of_purchases
+from sales
+where course_id = 3
+group by student_id;
+
+
+5) Which course was the most popular for each student?
+
+with data as
+(select student_id, course_id, count(1) as no_of_purchase
+from sales
+group by student_id, course_id),
+
+final as
+(select *,
+rank() over(partition by student_id order by no_of_purchase desc)
+from data d
+join course c on c.course_id = d.course_id)
+
+select student_id, course_name as most_popular_course, no_of_purchase
+from final
+where rank = 1
+
+
+6) Which course was purchased first by the user after they became students?
+
+with data as
+(select sls.student_id, order_date, course_id, joining_date,
+rank() over (partition by sls.student_id order by order_date)
+from sales sls
+join student std on sls.student_id = std.student_id 
+where order_date >= joining_date)
+
+select student_id, order_date, joining_date, course_name as first_purchased_course_after_becoming_student
+from data d
+join course c on c.course_id = d.course_id
+where rank = 1
+
+
+7) Which course was purchased just before the user became a student?
+
+with data as
+(select sls.student_id, order_date, course_id, joining_date,
+rank() over (partition by sls.student_id order by order_date desc)
+from sales sls
+join student std on sls.student_id = std.student_id 
+where order_date < joining_date)
+
+select student_id, order_date, joining_date, course_name as last_purchased_course_before_becoming_student
+from data d
+join course c on c.course_id = d.course_id
+where rank = 1
+
+
+8) What are the total course and amounts spent for each user before they became a student?
+
+with data as
+(select sls.student_id, order_date, course_id, joining_date
+from sales sls
+join student std on sls.student_id = std.student_id 
+where order_date < joining_date)
+
+select student_id, count(1) as total_courses, sum(price) as total_price
+from data d
+join course c on c.course_id = d.course_id
+group by student_id
+
+
+9) If each RS1000 spent equates to 10 points and Hadoop has a 2x points multiplier - 
+   how many points would each student have?
+
+with data as
+(select *,
+case when course_name = 'Hadoop' then price*2
+else price
+end as effective_price
+from sales s
+join course c on c.course_id = s.course_id)
+
+select student_id, sum(effective_price)/1000 as total_points
+from data
+group by student_id
+
+
+10) In the first week after a student joins the program (including their joining date) 
+    they earn 2x points on all items, not just Hadoop - how many points do students ABC and BCD 
+    have at the end of January?
+
+with data as
+(select s.student_id,
+case when course_name = 'Hadoop' then price*2
+else price
+end as effective_price
+from sales s
+join course c on c.course_id = s.course_id
+where order_date <= '2022-01-31'::date
+
+union all
+
+select sls.student_id,
+case when course_name <> 'Hadoop' and order_date between joining_date and joining_date + interval '6 day' then price
+else 0
+end as effective_price
+from sales sls
+join student std on std.student_id = sls.student_id
+join course c on c.course_id = sls.course_id)
+
+select student_id, sum(effective_price)/1000 as total_points
+from data 
+group by student_id
+
+
+
