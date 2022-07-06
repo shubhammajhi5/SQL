@@ -1,0 +1,87 @@
+## Write query to determine phone numbers that satisfy the following condition:
+	1) the numbers have both incoming and outgoing calls
+	2) the sum of duration of outgoing calls should be greater than incoming calls
+
+
+create table call_details  
+(
+	call_type varchar(10),
+	call_number varchar(12),
+	call_duration int
+);
+
+insert into call_details values
+('OUT','181868',13),
+('OUT','2159010',8),
+('OUT','2159010',178),
+('SMS','4153810',1),
+('OUT','2159010',152),
+('OUT','9140152',18),
+('SMS','4162672',1),
+('SMS','9168204',1),
+('OUT','9168204',576),
+('INC','2159010',5),
+('INC','2159010',4),
+('SMS','2159010',1),
+('SMS','4535614',1),
+('OUT','181868',20),
+('INC','181868',54),
+('INC','218748',20),
+('INC','2159010',9),
+('INC','197432',66),
+('SMS','2159010',1),
+('SMS','4535614',1);
+
+select * from call_details;
+
+
+
+
+# Method 1
+
+-->
+with incoming as
+	(select call_number, call_type, sum(call_duration) as total_duration
+	from call_details
+	where call_type = 'INC'
+	group by call_number, call_type
+	order by call_number, call_type),
+	
+	outgoing as
+	(select call_number, call_type, sum(call_duration) as total_duration
+	from call_details
+	where call_type = 'OUT'
+	group by call_number, call_type
+	order by call_number, call_type)
+	
+select *
+from incoming inc
+join outgoing out on inc.call_number = out.call_number and inc.total_duration < out.total_duration
+
+
+
+# Method 2
+
+-->
+with data as
+	(select call_number
+	, sum(case when call_type = 'INC' then call_duration else null end) as inc_duration
+	, sum(case when call_type = 'OUT' then call_duration else null end) as out_duration
+	from call_details
+	group by call_number)
+	
+select call_number
+from data
+where inc_duration is not null and out_duration is not null and out_duration > inc_duration
+
+
+
+# Method 3
+
+-->
+select call_number
+from call_details
+group by call_number
+having sum(case when call_type = 'INC' then call_duration else null end) > 0
+and sum(case when call_type = 'OUT' then call_duration else null end) > 0 
+and sum(case when call_type = 'OUT' then call_duration else null end) > sum(case when call_type = 'INC' then call_duration else null end)
