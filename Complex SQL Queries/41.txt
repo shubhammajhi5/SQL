@@ -1,0 +1,23 @@
+## Query to find sachin's career's milestone matches
+
+
+-->
+with cte1 as
+	(select match, innings, runs,
+	sum(runs) over (order by match rows between unbounded preceding and current row) as rolling_sum
+	from sachin_scores),
+	
+	cte2 as
+	(select 1 as milestone_number, 1000 as milestone_runs
+	 union all
+	 select 2 as milestone_number, 5000 as milestone_runs
+	 union all
+	 select 3 as milestone_number, 10000 as milestone_runs
+	 union all
+	 select 4 as milestone_number, 15000 as milestone_runs)
+
+select cte2.milestone_number, cte2.milestone_runs, min(match) as milestone_match, min(innings) as milestone_inning
+from cte2
+join cte1 on cte1.rolling_sum >= cte2.milestone_runs
+group by cte2.milestone_number, cte2.milestone_runs
+order by cte2.milestone_number
