@@ -1,0 +1,38 @@
+## Ungroup the data
+
+
+create table travel_items
+(
+	id int,
+	item_name varchar,
+	total_count int
+);
+
+insert into travel_items values
+(1, 'Water Bottle', 2),
+(2, 'Tent', 1),
+(3, 'Apple', 4);
+
+select * from travel_items;
+
+
+
+
+-->
+
+with recursive cte as
+(
+	select id, item_name, total_count
+	from travel_items
+	
+	union
+	
+	select cte.id, cte.item_name, cte.total_count - 1
+	from cte 
+	join travel_items t on t.id = cte.id and t.item_name = cte.item_name
+	where cte.total_count > 1
+)
+
+select id, item_name
+from cte
+order by id
