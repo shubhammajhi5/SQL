@@ -1,0 +1,40 @@
+## Query to find employees with same salary in the same department
+
+
+create table emp_salary
+(
+    emp_id integer,
+    name varchar(20),
+    salary varchar(30),
+    dept_id varchar(20)
+);
+
+
+insert into emp_salary values
+(101, 'sohan', '3000', '11'),
+(102, 'rohan', '4000', '12'),
+(103, 'mohan', '5000', '13'),
+(104, 'murthy', '3000', '11'),
+(105, 'suresh', '4000', '12'),
+(109, 'mahesh', '7000', '12'),
+(108, 'kamal', '8000', '11');
+
+select * from emp_salary;
+
+
+
+
+-->
+
+with cte as 
+(
+select dept_id, salary
+from emp_salary
+group by dept_id, salary
+having count(1) > 1
+)
+
+select es.*
+from emp_salary es
+join cte on es.dept_id = cte.dept_id and es.salary = cte.salary
+order by dept_id
