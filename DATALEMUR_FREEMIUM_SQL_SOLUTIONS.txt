@@ -1,0 +1,945 @@
+## Data Science Skills
+
+SELECT candidate_id
+FROM candidates
+where skill in ('Python', 'Tableau', 'PostgreSQL')
+group by candidate_id
+having count(1) = 3
+
+
+## Page With No Likes
+
+select p.page_id
+from pages p
+left join page_likes l on p.page_id = l.page_id
+where user_id is null
+order by p.page_id
+
+
+## Unfinished Parts
+
+SELECT distinct part
+FROM parts_assembly
+where finish_date is null
+
+
+## Laptop vs Mobile Viewership
+
+SELECT count(case when device_type in ('laptop') then user_id else null end) as laptop_views,
+       count(case when device_type in ('phone', 'tablet') then user_id else null end) as mobile_views
+FROM viewership
+
+
+## Cities With Completed Trades
+
+select city, count(1) as total_orders
+from trades t
+join users u on t.user_id = u.user_id
+where status = 'Completed'
+group by city
+order by count(1) desc
+limit 3
+
+
+## Duplicate Job Listings
+
+with data AS
+(
+  SELECT company_id, title, description, count(1)
+  FROM job_listings
+  group by company_id, title, description
+  having count(1) > 1
+)
+
+select count(1) as duplicate_companies
+from data
+
+
+## Photoshop Revenue Analysis
+
+select customer_id, sum(revenue) as revenue
+from adobe_transactions
+where customer_id in
+(SELECT customer_id
+FROM adobe_transactions
+where product = 'Photoshop')
+and product <> 'Photoshop'
+group by customer_id
+order by customer_id
+
+
+## Final Account Balance
+
+with data as 
+(
+SELECT account_id,
+sum(case when transaction_type = 'Deposit' then amount else null end) as total_deposit,
+sum(case when transaction_type = 'Withdrawal' then amount else null end) as total_withdrawal
+FROM transactions
+group by account_id
+)
+
+select account_id,
+       total_deposit - total_withdrawal as final_balance
+from data
+
+
+## Histogram of Tweets
+
+with cte AS
+(
+  SELECT user_id, count(1) tweet_bucket
+  FROM tweets
+  where extract(year from tweet_date) = 2022
+  group by user_id
+)
+
+select tweet_bucket, count(1) as users_num
+from cte 
+group by tweet_bucket
+
+
+## Average Review Ratings
+
+SELECT extract(month from submit_date) as month,
+       product_id,
+       round(avg(stars), 2) as avg_stars
+FROM reviews
+group by extract(month from submit_date),
+         product_id
+order by month,
+         product_id
+
+
+## LinkedIn Power Creators (Part 1)
+
+SELECT p.profile_id
+FROM personal_profiles p
+join company_pages c on p.employer_id = c.company_id
+where p.followers > c.followers
+order by p.profile_id
+
+
+## Highest Number of Products
+
+SELECT user_id, count(product_id) as product_num
+FROM user_transactions
+group by user_id
+having sum(spend) >= 1000
+order by count(product_id) desc, sum(spend) desc
+limit 3
+
+
+## Spare Server Capacity
+
+with demand as 
+(
+  SELECT datacenter_id, sum(monthly_demand) as demand
+  FROM forecasted_demand
+  group by datacenter_id 
+)
+
+select c.datacenter_id, monthly_capacity - demand as spare_capacity
+from datacenters c
+join demand d on c.datacenter_id = d.datacenter_id
+order by c.datacenter_id
+
+
+## Average Post Hiatus (Part 1)
+
+select user_id, max(post_date)::date - min(post_date)::date as days_between
+from posts 
+where user_id in
+(SELECT user_id
+FROM posts
+where extract(year from post_date) = 2021
+group by user_id
+having count(1) > 1)
+group by user_id 
+
+
+## Teams Power Users
+
+SELECT sender_id, count(1) as message_count
+FROM messages
+where sent_date between '08/01/2022' and '08/31/2022'
+group by sender_id
+order by count(1) DESC
+limit 2
+
+
+## Histogram of Users and Purchases
+
+with latest_trans as
+(
+  SELECT user_id, max(transaction_date) last_trans
+  FROM user_transactions
+  group by user_id
+),
+
+data as
+(
+select ut.* 
+from user_transactions ut
+join latest_trans lt on ut.user_id = lt.user_id and ut.transaction_date = lt.last_trans 
+)
+
+select transaction_date,
+       count(distinct user_id) as number_of_users,
+       count(distinct product_id) as number_of_products
+from data
+group by transaction_date
+
+
+## Unique Money Transfer Relationships
+
+with data as 
+(
+SELECT payer_id, recipient_id, sum(amount) as amount
+FROM payments
+group by payer_id, recipient_id
+order by payer_id, recipient_id
+),
+
+final AS
+(
+select *
+from data d1
+join data d2 on d1.payer_id = d2.recipient_id 
+and d1.recipient_id = d2.payer_id
+and d1.payer_id < d2.payer_id
+)
+
+select count(1) as unique_relationships
+from final
+
+
+## Ad Campaign ROAS
+
+SELECT advertiser_id,ROUND((sum(revenue) / sum(spend))::numeric, 2) as ROAS 
+FROM ad_campaigns
+group by advertiser_id
+order by advertiser_id
+
+
+## App Click-through Rate (CTR)
+
+with data AS
+(
+SELECT app_id,
+count(case when event_type = 'click' then app_id else null end) as click_count,
+count(case when event_type = 'impression' then app_id else null end) as impression_count
+FROM events
+where extract(year from timestamp) = 2022
+group by app_id
+)
+
+select app_id,
+       round(((click_count::float/impression_count)*100.0)::numeric, 2) as ctr
+from data
+
+
+## Second Day Confirmation
+
+with data as
+(
+SELECT user_id, signup_date, action_date, signup_action, extract(days from action_date - signup_date) as diff
+FROM emails e
+join texts t on t.email_id = e.email_id
+)
+
+select user_id 
+from data 
+where signup_action = 'Confirmed' and diff = 1
+
+
+## User's Third Transaction
+
+with data as
+(
+SELECT *,
+row_number() over(partition by user_id order by transaction_date) as tr_num
+FROM transactions
+)
+
+select user_id, spend, transaction_date
+from data
+where tr_num = 3
+
+
+## Compensation Outliers
+
+with cte as 
+(
+SELECT *,
+AVG(salary) over (partition by title) as avg_sal
+FROM employee_pay
+),
+
+final as 
+(
+select employee_id, salary,
+case when salary > 2*avg_sal then 'Overpaid'
+     when salary < 0.5*avg_sal then 'Underpaid'
+     else NULL
+end as status
+from cte
+)
+
+select *
+from final 
+where status is not null
+
+
+## Sending vs. Opening Snaps
+
+with data as 
+(
+SELECT age_bucket,
+sum(case when activity_type = 'send' then time_spent else null end) as send_time,
+sum(case when activity_type = 'open' then time_spent else null end) as open_time,
+sum(case when activity_type = 'send' then time_spent else null end) +
+sum(case when activity_type = 'open' then time_spent else null end) as total_time
+FROM activities a
+join age_breakdown b on b.user_id = a.user_id
+where activity_type in ('open', 'send')
+group by age_bucket
+)
+
+select age_bucket,
+round((send_time/total_time)*100, 2) as send_perc,
+round((open_time/total_time)*100, 2) as open_perc
+from data
+
+
+## Tweets' Rolling Averages
+
+with data AS
+(
+SELECT user_id, tweet_date, count(distinct tweet_id) as num_tweet
+FROM tweets
+group by user_id, tweet_date
+)
+
+select user_id, tweet_date,
+round(avg(num_tweet) over (partition by user_id order by tweet_date rows between 2 preceding and current row), 2) as rolling_avg_3d
+from data
+
+
+## Odd and Even Measurements
+
+with data as 
+(
+SELECT *,
+row_number() over (partition by measurement_time::date order by measurement_time) as rn,
+measurement_time::date as measurement_day
+FROM measurements
+order by measurement_time
+)
+
+select measurement_day,
+sum(case when rn%2 <> 0 then measurement_value else null end) as odd_sum,
+sum(case when rn%2 = 0 then measurement_value else null end) as even_sum
+from data
+group by measurement_day
+order by measurement_day
+
+
+## Frequently Purchased Pairs
+
+with data as 
+(
+SELECT t.user_id, t.product_id, t.transaction_id, p.product_name
+FROM transactions t
+join products p on p.product_id = t.product_id
+)
+
+select d1.product_name, d2.product_name, count(1) as combo_num
+from data d1 
+join data d2 on d2.transaction_id = d1.transaction_id 
+and d1.product_id > d2.product_id 
+group by d1.product_name, d2.product_name
+order by count(1) desc
+limit 3
+
+
+## Highest-Grossing Items
+
+with data AS
+(
+  SELECT category, product, sum(spend) as total_spend
+  FROM product_spend
+  where extract(year from transaction_date) = 2022
+  group by category, product
+),
+
+final AS
+(
+select *, rank() over(partition by category order by total_spend desc)
+from data
+)
+
+select category, product, total_spend
+from final
+where rank < 3
+
+
+## First Transaction
+
+with data AS
+(
+SELECT *,
+rank() over(partition by user_id order by transaction_date, transaction_id)
+FROM user_transactions
+),
+
+final AS
+(
+select user_id, spend, transaction_date
+from data 
+where rank = 1 and spend >= 50
+)
+
+select count(1) as users
+from final
+
+
+## LinkedIn Power Creators (Part 2)
+
+with data AS
+(
+SELECT pp.profile_id, pp.followers, max(cp.followers) as comp_followers
+FROM personal_profiles pp
+join employee_company ec on pp.profile_id = ec.personal_profile_id
+join company_pages cp on cp.company_id = ec.company_id
+group by pp.profile_id, pp.followers
+order by pp.profile_id
+)
+
+select profile_id
+from data
+where followers > comp_followers
+
+
+## Top 5 Artists
+
+with data AS
+(
+select artist_name, count(1) as song_appearance
+from songs s
+join artists a on s.artist_id = a.artist_id
+join global_song_rank r on r.song_id = s.song_id 
+where rank <= 10
+group by artist_name
+),
+
+final as
+(
+select *,
+dense_rank() over(order by song_appearance desc) as artist_rank
+from data 
+)
+
+select artist_name, artist_rank
+from final
+where artist_rank <= 5
+order by artist_rank
+
+
+## Signup Confirmation Rate
+
+with data AS
+(
+SELECT count(1) as total,
+sum(case when signup_action = 'Confirmed' then 1 else null end) as valid
+FROM emails e
+join texts t on e.email_id = t.email_id
+)
+
+select round((valid::float/total)::numeric, 2) as confirm_rate
+from data
+
+
+## Fill Missing Client Data
+
+with cte as 
+(
+SELECT *,
+lead(product_id, 1, 999) over(order by product_id) as next_product_id
+FROM products
+where category is not null
+order by product_id
+)
+
+select p.product_id, cte.category, p.name
+from products p
+join cte on p.product_id >= cte.product_id and p.product_id < cte.next_product_id
+order by p.product_id
+
+
+## Consulting Bench Time
+
+with data AS
+(
+SELECT employee_id, end_date - start_date as non_bench_days, start_date, end_date
+FROM staffing s
+join consulting_engagements ce on ce.job_id = s.job_id
+where s.is_consultant = 'true'
+)
+
+select employee_id, 365 - (sum(non_bench_days) + count(1)) as bench_days
+from data
+group by employee_id
+
+
+## Spotify Listening History
+
+with data as
+(
+select user_id, song_id, count(song_id) as song_plays
+from songs_weekly
+where listen_time <= '08/04/2022 23:59:59'
+group by user_id, song_id
+
+UNION ALL
+
+select user_id, song_id, song_plays
+from songs_history
+)
+
+select user_id, song_id, sum(song_plays) as song_plays
+from data
+group by user_id, song_id
+order by sum(song_plays) desc
+
+
+## User Session Activity
+
+with data as 
+(
+SELECT user_id, session_type, sum(duration) as duration
+FROM sessions
+where start_date between '01/01/2022' and '02/01/2022 23:59:59'
+group by user_id, session_type
+)
+
+select user_id, session_type,
+rank() over (partition by session_type order by duration desc) as ranking
+from data
+
+
+## Single User Purchases
+
+with data AS
+(
+SELECT *, p.user_id as userid,
+p.purchase_date::date - s.signup_date::date as diff
+FROM user_purchases p
+join signups s on s.user_id = p.user_id
+order by p.user_id, p.purchase_date
+),
+
+valid_users AS
+(
+select userid
+from data
+group by userid
+having min(diff) <= 7
+)
+
+select round(100*(count(1)::float/(select count(distinct user_id) from signups))::numeric, 2) as single_purchase_pct
+from valid_users
+
+
+## Invalid Search Results
+
+with data as 
+(
+SELECT *,
+(num_search * invalid_result_pct)/100 as invalid_search
+FROM search_category
+where invalid_result_pct is not null
+)
+
+select country, sum(num_search) as total_search, 
+round((sum(invalid_search)/sum(num_search))*100, 2) as invalid_result_pct
+from data
+group by country
+
+
+## Top Rated Businesses
+
+with cte as 
+(
+SELECT *,
+case when review_stars in (4, 5) then 1 else 0 end as "top_rated"
+FROM reviews
+)
+
+select sum(top_rated) as business_num,
+round(((sum(top_rated)::float/count(1))*100)::numeric, 2) as top_business_pct
+from cte
+
+
+## Repeat Purchases on Multiple Days
+
+with data AS
+(
+  SELECT user_id, product_id, count(distinct extract(day from purchase_date))
+  FROM purchases
+  group by user_id, product_id
+  having count(distinct extract(day from purchase_date)) > 1
+)
+
+select count(1) as users_num
+from data
+
+
+## Purchasing Activity by Product Type
+
+select order_date, product_type,
+sum(quantity) over (partition by product_type order by order_date) as cum_purchased
+from total_trans
+order by order_date
+
+
+## Active User Retention
+
+with june_data as 
+(
+SELECT user_id, extract(month from event_date) as month, count(1) as num_activity
+FROM user_actions
+where extract(month from event_date) = 6
+group by user_id, extract(month from event_date)
+order by user_id, extract(month from event_date)
+),
+
+july_data as
+(
+SELECT user_id, extract(month from event_date) as month, count(1) as num_activity
+FROM user_actions
+where extract(month from event_date) = 7
+group by user_id, extract(month from event_date)
+order by user_id, extract(month from event_date)
+)
+
+select month, count(1) as monthly_active_users 
+from july_data
+where user_id in (select user_id from june_data)
+group by month
+
+
+## Y-on-Y Growth Rate
+
+with data as 
+(
+SELECT extract(year from transaction_date) as year, product_id,
+spend as curr_year_spend, lag(spend) over(partition by product_id order by transaction_date) as prev_year_spend
+FROM user_transactions
+)
+
+select *,
+round(100*((curr_year_spend-prev_year_spend)/prev_year_spend),2) as yoy_rate
+from data
+
+
+## User Shopping Sprees
+
+with data as
+(
+SELECT *, transaction_date::date as date
+,transaction_date::date - row_number() over (partition by user_id order by transaction_date)::int as diff
+FROM transactions
+order by user_id, date
+),
+
+final as 
+(
+select user_id, diff, count(1) as spree
+from data 
+group by user_id, diff
+)
+
+select user_id
+from final
+where spree >= 3
+
+
+## Monthly Merchant Balance
+
+with daily_balances as
+(
+select date_trunc('day', transaction_date) as transaction_day,
+       date_trunc('month', transaction_date) as transaction_month,
+       sum(case when type = 'deposit' then amount
+                when type = 'withdrawal' then -amount end) as balance
+from transactions
+group by  1, 2
+order by 1
+)
+
+select transaction_day,
+  	 sum(balance) over (partition by transaction_month order by transaction_day) as balance
+from daily_balances
+order by transaction_day
+
+
+## Bad Delivery Rate
+
+with valid_cust as  
+(
+  SELECT *
+  FROM customers
+  where extract(month from signup_timestamp) = 6
+),
+
+data as  
+(
+select *,
+extract(days from (order_timestamp - signup_timestamp)) as diff
+from orders o   
+join trips t on o.trip_id = t.trip_id
+join valid_cust c on o.customer_id = c.customer_id
+),
+
+final as  
+(
+select *,
+case when status = 'completed successfully' then 'good'
+else 'bad'
+end as delivery_type
+from data
+where diff <= 14
+)
+
+select round(100*(count(1)::float/(select count(1) from final))::numeric, 2) as bad_experience_pct
+from final 
+where delivery_type = 'bad'
+
+
+## Server Utilization Time
+
+with data as 
+(
+SELECT server_id, session_status, status_time as stop_time,
+case when session_status = 'stop' then lag(status_time) over (partition by server_id order by server_id, status_time) end as start_time
+FROM server_utilization
+order by server_id, status_time
+),
+
+final AS
+(
+select *, stop_time-start_time as diff 
+from data
+where session_status = 'stop'
+)
+
+select extract(days from sum(diff)) + round(extract(hours from sum(diff))/24) as total_uptime_days
+from final
+
+
+## Reactivated Users
+
+with data as 
+(
+SELECT user_id, extract(month from login_date) as month
+FROM user_logins
+order by user_id
+),
+
+data2 as 
+(
+select *,
+lag(month) over(partition by user_id order by month) as prev_month,
+month - lag(month) over(partition by user_id order by month) as diff
+from data
+),
+
+final as 
+(
+select user_id, month,
+case when diff = 1 then 'no'
+else 'yes' 
+end as reactivated
+from data2
+)
+
+select month as current_month, count(1) as reactivated_users
+from final
+where reactivated = 'yes'
+group by month
+
+
+## 2nd Level Managers
+
+with data AS
+(
+SELECT emp_id as first_lvl_manager,
+       manager_id as second_lvl_manager,
+       manager_name
+FROM employees
+where emp_id in (select distinct manager_id from employees)
+and manager_id is not null
+and manager_name is not null
+),
+
+final AS
+(
+select *
+from data
+where first_lvl_manager not in (select second_lvl_manager from data)
+and second_lvl_manager not in 
+(select second_lvl_manager from data
+where first_lvl_manager in(select second_lvl_manager from data))
+)
+
+
+select manager_name, count(1) as direct_report_count
+from final
+group by manager_name
+order by count(1) desc
+
+
+## Maximize Prime Item Inventory
+
+with prime as 
+(
+SELECT sum(square_footage) as total_sq_footage, count(1) as no_of_items
+FROM inventory
+where item_type = 'prime_eligible'
+),
+
+non_prime AS
+(
+SELECT sum(square_footage) as total_sq_footage, count(1) as no_of_items
+FROM inventory
+where item_type = 'not_prime'
+),
+
+prime_stock AS
+(
+select floor(500000 / total_sq_footage) as stock_count, floor(500000 / total_sq_footage) * no_of_items as item_count
+from prime
+),
+
+rem_sq_footage AS
+(
+select round(500000 - (stock_count * total_sq_footage)) as remaining_sq_footage
+from prime_stock 
+cross join prime
+),
+
+non_prime_stock as 
+(
+select floor((select * from rem_sq_footage) / total_sq_footage) as stock_count,
+floor((select * from rem_sq_footage) / total_sq_footage) * no_of_items as item_count
+from non_prime
+)
+
+select 'prime_eligible' as item_type, item_count
+from prime_stock
+union all  
+select 'not_prime' as item_type, item_count
+from non_prime_stock
+
+
+## Median Google Search Frequency
+
+-- with data AS
+-- (
+-- select searches 
+-- from search_frequency
+-- group by searches, GENERATE_SERIES(1, num_users)
+-- order by searches
+-- )
+
+with recursive cte AS
+(
+SELECT searches, num_users 
+FROM search_frequency
+union all 
+select cte.searches, cte.num_users - 1
+from cte  
+join search_frequency sf on cte.searches = sf.searches
+where cte.num_users > 1
+),
+
+data as 
+(
+select searches
+from cte
+order by searches
+)
+
+
+select round(PERCENTILE_CONT(0.5) within group (order by searches)::decimal, 1) as median
+from data  
+
+
+## Advertiser Status
+
+with data AS
+(
+SELECT a.user_id as user_id_a, status, d.user_id as user_id_d, paid
+FROM advertiser a 
+full outer join daily_pay d on a.user_id = d.user_id 
+)
+
+select COALESCE(user_id_a, user_id_d),
+case when paid is null then 'CHURN'
+when paid is not null and status = 'CHURN' then 'RESURRECT'
+when paid is not null and status is null then 'NEW'
+else 'EXISTING'
+end as new_status
+from data 
+order by 1
+
+
+## Matching Rental Amenities
+
+with data as 
+(
+SELECT rental_id, string_agg(amenity,'|') as amenities
+FROM rental_amenities
+group by rental_id
+order by rental_id
+)
+
+select count(1) as matching_airbnb
+from data d1
+join data d2 on d1.amenities = d2.amenities
+and d1.rental_id > d2.rental_id
+
+
+## Weekly Churn Rates
+
+with data as 
+(
+SELECT 
+case when extract(week from signup_date) = 22 then 1
+when extract(week from signup_date) = 23 then 2
+when extract(week from signup_date) = 24 then 3
+when extract(week from signup_date) = 25 then 4
+end as signup_week,
+signup_date, last_login,
+extract(days from (last_login - signup_date)) as diff,
+case when extract(days from (last_login - signup_date)) <= 28 then 'CHURNED'
+else 'NOT CHURNED'
+end as status
+FROM users
+where extract(month from signup_date) = 6
+order by 1, 2, 3
+),
+
+final as  
+(
+select signup_week,
+sum(case when status = 'CHURNED' then 1 else 0 end) as churn_count,
+sum(case when status = 'NOT CHURNED' then 1 else 0 end) as not_churn_count
+from data
+group by signup_week
+)
+
+select signup_week,
+round(100 * (churn_count::decimal / (churn_count + not_churn_count)), 2) as churn_rate
+from final
