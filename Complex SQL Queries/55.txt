@@ -1,0 +1,30 @@
+## Find distinct pair of cities
+
+
+create table src_dest_dist
+(
+	source varchar,
+	destination varchar,
+	distance int
+);
+
+insert into src_dest_dist values
+('Banglore', 'Hyderabad', 300),
+('Hyderabad', 'Banglore', 300),
+('Delhi', 'Mumbai', 1200),
+('Mumbai', 'Delhi', 1200),
+('Chennai', 'Pune', 800),
+('Pune', 'Chennai', 800);
+
+select * from src_dest_dist;
+
+
+
+
+--> 
+
+select d1.* 
+from src_dest_dist d1
+join src_dest_dist d2 on d1.source = d2.destination
+and d1.destination = d2.source
+and d1.source < d2.source
