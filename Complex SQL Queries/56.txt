@@ -1,0 +1,54 @@
+## Find avg distance between source and distance
+
+
+create table src_dest_dist
+(
+	source varchar,
+	destination varchar,
+	distance int
+);
+
+insert into src_dest_dist values
+('A', 'B', 21),
+('B', 'A', 28),
+('A', 'B', 19),
+('C', 'D', 15),
+('C', 'D', 17),
+('D', 'C', 16),
+('D', 'C', 18);
+
+select * from src_dest_dist;
+
+
+
+
+-->
+
+with data as
+(
+	select source, 
+		   destination,
+		   sum(distance) as tot_dist,
+		   count(1) as num_routes
+	from src_dest_dist t1
+	group by source, destination
+),
+
+final as
+(
+	select d2.source,
+		   d2.destination,
+		   d1.tot_dist + d2.tot_dist as tot_dist,
+		   d1.num_routes + d2.num_routes as num_routes
+	from data d1
+	join data d2 on d1.source = d2.destination 
+	and d1.destination = d2.source 
+	and d1.source > d2.source
+	order by d2.source
+)
+
+select source,
+	   destination,
+	   round(tot_dist::decimal / num_routes, 2) as avg_dist
+from final
+
