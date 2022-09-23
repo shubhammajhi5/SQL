@@ -1,0 +1,74 @@
+## Find the largest value among the whole table
+
+
+create table largest
+(
+	col1 int,
+	col2 int,
+	col3 int,
+	col4 int,
+	col5 int
+);
+
+insert into largest values
+(1, 23, 43, 5, 54),
+(2, 2334, 63, 25, 513),
+(14, 253, 475, 2355, 234),
+(31,453, 4234, 4532, 542),
+(5, 23, 4233, 524, 6765),
+(63, 2332, 5543, 2464, 534),
+(45, 13, 235, 4351, 235),
+(678, 27, 435, 5323, 5786),
+(14, 65, 3243, 2343, 5455);
+
+select * from largest;
+
+
+
+
+-->
+
+
+# Method 1:
+
+with cte as
+(
+	select col1
+	from largest
+	
+	union all
+	
+	select col2
+	from largest
+	
+	union all
+	
+	select col3
+	from largest
+	
+	union all
+	
+	select col4
+	from largest
+	
+	union all
+	
+	select col5
+	from largest
+)
+
+select max(col1) as max_value
+from cte
+
+
+
+# Method 2
+
+with cte as
+(
+select unnest(string_to_array(concat(col1, ',', col2, ',', col3, ',', col4, ',', col5), ',')) as all_num
+from largest
+)
+
+select max(all_num::int) as max_num
+from cte
