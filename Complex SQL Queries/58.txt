@@ -1,0 +1,37 @@
+## Query to combine two employee details together in a row separated by a comma
+
+
+create table emp_input
+(
+	id int,
+	name varchar
+);
+
+insert into emp_input values
+(1, 'Raja'),
+(2, 'Ram'),
+(3, 'Mohan'),
+(4, 'Roy'),
+(5, 'Neil'),
+(6, 'Nitin'),
+(7, 'Mukesh'),
+(8, 'Jenny');
+
+select * from emp_input;
+
+
+
+
+-->
+
+with data as
+(
+	select id||' '||name as id_name,
+	ntile(4) over(order by id) as buckets
+	from emp_input
+)
+
+select string_agg(id_name, ', ') as result
+from data
+group by buckets
+order by buckets
